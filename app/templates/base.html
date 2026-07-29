@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Office Notice Portal{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <header>
+        <nav>
+            <a class="logo" href="{{ url_for('employee.home') }}">
+                <span>Notice</span>Portal
+            </a>
+            <ul>
+                {% if current_user.is_authenticated %}
+                    <li><a href="{{ url_for('employee.home') }}">Notice Feed</a></li>
+                    
+                    {% if current_user.role and current_user.role.name == 'Super Admin' %}
+                        <li><a href="{{ url_for('admin.dashboard') }}">Admin Dashboard</a></li>
+                    {% endif %}
+                    
+                    <li><a href="{{ url_for('auth.profile') }}">Profile ({{ current_user.username }})</a></li>
+                    <li><a href="{{ url_for('auth.logout') }}">Log Out</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('auth.login') }}">Log In</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container">
+        <!-- Flash Messages Block -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                    {% for category, message in messages %}
+                        <li class="alert alert-{{ category }}">{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Office Notice Portal. All rights reserved.</p>
+    </footer>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

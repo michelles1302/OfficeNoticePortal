@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}User Profile - Office Notice Portal{% endblock %}
+
+{% block content %}
+<div class="profile-grid">
+    <!-- Profile Card Sidebar -->
+    <div class="profile-card">
+        <div class="profile-avatar">
+            {{ current_user.username[0] | upper if current_user.username else 'U' }}
+        </div>
+        <div class="profile-info">
+            <h3>{{ current_user.username }}</h3>
+            <p class="role-badge">{{ current_user.role.name if current_user.role else 'No Role Assigned' }}</p>
+        </div>
+        
+        <ul class="profile-meta-list">
+            <li>
+                <span class="label">Department</span>
+                <span class="val">{{ current_user.department.name if current_user.department else 'All Departments' }}</span>
+            </li>
+            <li>
+                <span class="label">Division Code</span>
+                <span class="val">{{ current_user.department.code if current_user.department else 'N/A' }}</span>
+            </li>
+            <li>
+                <span class="label">Account Status</span>
+                <span class="val" style="color: var(--success);">Active</span>
+            </li>
+            <li>
+                <span class="label">Member Since</span>
+                <span class="val">{{ current_user.created_at.strftime('%Y-%m-%d') }}</span>
+            </li>
+        </ul>
+        
+        <div style="margin-top: 2rem;">
+            <a href="{{ url_for('auth.change_password') }}" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.6rem 1rem;">Change Password</a>
+        </div>
+    </div>
+
+    <!-- Update Information Form -->
+    <div class="profile-form-card">
+        <h2>Profile Settings</h2>
+        <form method="POST" action="{{ url_for('auth.profile') }}" novalidate>
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                {{ form.username.label }}
+                {% if form.username.errors %}
+                    {{ form.username(class="input-control is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.username.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    {{ form.username(class="input-control") }}
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                {{ form.email.label }}
+                {% if form.email.errors %}
+                    {{ form.email(class="input-control is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.email.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    {{ form.email(class="input-control") }}
+                {% endif %}
+            </div>
+            
+            <div class="form-group" style="opacity: 0.65;">
+                <label>Assigned Role (Cannot be changed)</label>
+                <input class="input-control" value="{{ current_user.role.name if current_user.role else 'No Role Assigned' }}" disabled>
+            </div>
+            
+            {{ form.submit(class="btn btn-primary", style="margin-top: 1rem;") }}
+        </form>
+    </div>
+</div>
+{% endblock %}

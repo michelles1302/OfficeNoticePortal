@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Log In - Office Notice Portal{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="card">
+        <h2>Welcome Back</h2>
+        <p class="subtitle">Access corporate announcements and policies</p>
+        
+        <form method="POST" action="{{ url_for('auth.login') }}" novalidate>
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                {{ form.email.label }}
+                {% if form.email.errors %}
+                    {{ form.email(class="input-control is-invalid", placeholder="name@company.com") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.email.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    {{ form.email(class="input-control", placeholder="name@company.com") }}
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                {{ form.password.label }}
+                {% if form.password.errors %}
+                    {{ form.password(class="input-control is-invalid", placeholder="Enter your password") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.password.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    {{ form.password(class="input-control", placeholder="Enter your password") }}
+                {% endif %}
+            </div>
+            
+            <div class="checkbox-group">
+                {{ form.remember_me() }}
+                {{ form.remember_me.label }}
+            </div>
+            
+            {{ form.submit(class="btn btn-primary") }}
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}{{ notice.title }} | Office Notice Portal{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/notice_portal.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{{ request.referrer or url_for('employee.home') }}" class="btn btn-sm btn-secondary">
+        ← Back to Feed
+    </a>
+</div>
+
+<!-- Notice Detail Card -->
+<div class="notice-detail-card">
+    <div class="notice-detail-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge-category">{{ notice.category.name if notice.category else 'General' }}</span>
+                {% if notice.priority == 'High' %}
+                    <span class="badge-priority badge-priority-high">🔴 High Priority</span>
+                {% elif notice.priority == 'Medium' %}
+                    <span class="badge-priority badge-priority-medium">🟡 Medium Priority</span>
+                {% else %}
+                    <span class="badge-priority badge-priority-low">🟢 Low Priority</span>
+                {% endif %}
+
+                {% if is_admin %}
+                    {% if notice.status == 'Published' %}
+                        <span class="badge-status badge-status-published">Published</span>
+                    {% elif notice.status == 'Draft' %}
+                        <span class="badge-status badge-status-draft">Draft</span>
+                    {% else %}
+                        <span class="badge-status badge-status-archived">Archived</span>
+                    {% endif %}
+                {% endif %}
+            </div>
+
+            <div>
+                {% if user_has_read %}
+                    <span class="badge-read">✓ Read on {{ user_has_read.read_at.strftime('%b %d, %Y %H:%M') }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <h1 class="notice-detail-title">{{ notice.title }}</h1>
+
+        <div class="d-flex flex-wrap gap-3 text-muted small">
+            <span>👤 Author: <strong>{{ notice.author.username if notice.author else 'System Admin' }}</strong></span>
+            <span>🏢 Target: <strong>{{ notice.target_department.name if notice.target_department else 'All Departments' }}</strong></span>
+            <span>📅 Published: <strong>{{ notice.created_at.strftime('%B %d, %Y at %I:%M %p') }}</strong></span>
+            {% if notice.expiry_date %}
+                <span>⏳ Expires: <strong>{{ notice.expiry_date.strftime('%B %d, %Y at %I:%M %p') }}</strong></span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Notice Body -->
+    <div class="notice-detail-body">
+        {{ notice.content }}
+    </div>
+
+    <!-- Attachments Section -->
+    {% if notice.attachments and notice.attachments|length > 0 %}
+    <div class="attachments-section">
+        <div class="attachments-title">
+            📎 Attachments ({{ notice.attachments|length }})
+        </div>
+        <ul class="attachment-list">
+            {% for file in notice.attachments %}
+            <li>
+                <a href="{{ url_for('notice.download_attachment', attachment_id=file.id) }}" class="attachment-item" title="Download File">
+                    <span>📄 <strong>{{ file.filename }}</strong></span>
+                    <span class="text-muted">({{ (file.file_size / 1024)|round(1) }} KB)</span>
+                    <span class="ms-1">⬇️ Download</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Admin Controls -->
+    {% if is_admin %}
+    <div class="d-flex justify-content-end gap-2 border-top border-secondary border-opacity-25 pt-4 mt-4">
+        <a href="{{ url_for('notice.edit', notice_id=notice.id) }}" class="btn btn-primary">Edit Notice</a>
+        <form method="POST" action="{{ url_for('notice.toggle_status', notice_id=notice.id) }}" class="d-inline">
+            {% if notice.status == 'Published' %}
+                <button type="submit" class="btn btn-warning">Unpublish to Draft</button>
+            {% else %}
+                <button type="submit" class="btn btn-success">Publish Notice</button>
+            {% endif %}
+        </form>
+        <form method="POST" action="{{ url_for('notice.delete', notice_id=notice.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this notice?');">
+            <button type="submit" class="btn btn-outline-danger">Delete Notice</button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Admin Read Receipts & Analytics Panel -->
+{% if is_admin and read_stats %}
+<div class="card max-w-none w-100 mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Read Verification & Acknowledgements</h2>
+        <span class="badge-status badge-status-published">{{ read_stats.total_read }} / {{ read_stats.target_total }} Employees Read ({{ read_stats.percentage }}%)</span>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-custom mb-4">
+        <div class="progress-bar-custom" style="width: {{ read_stats.percentage }}%;"></div>
+    </div>
+
+    <div class="table-responsive-custom">
+        <table class="table-custom">
+            <thead>
+                <tr>
+                    <th>Employee Name</th>
+                    <th>Email</th>
+                    <th>Department</th>
+                    <th>Acknowledged Timestamp</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if read_stats.read_logs %}
+                    {% for log in read_stats.read_logs %}
+                    <tr>
+                        <td class="fw-bold">{{ log.user.username }}</td>
+                        <td class="text-muted">{{ log.user.email }}</td>
+                        <td>
+                            {% if log.user.department %}
+                                <span class="badge-department">{{ log.user.department.code }}</span>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted">{{ log.read_at.strftime('%b %d, %Y at %I:%M %p') }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="4" class="text-center py-3 text-muted">
+                            No employees have acknowledged this notice yet.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/notice_portal.js') }}"></script>
+{% endblock %}

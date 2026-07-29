@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard | Office Notice Portal{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/notice_portal.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div class="dashboard-title">
+        <h1>Administrative Dashboard</h1>
+        <p>Overview of system metrics, active notice distributions, and corporate announcements.</p>
+    </div>
+    <div class="dashboard-actions">
+        <a href="{{ url_for('notice.create') }}" class="btn btn-primary">
+            + Create New Notice
+        </a>
+    </div>
+</div>
+
+<!-- Stats Counters Grid -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon primary">📋</div>
+        <div class="stat-details">
+            <h3>{{ stats.total_notices }}</h3>
+            <p>Total Notices</p>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon success">📢</div>
+        <div class="stat-details">
+            <h3>{{ stats.published_notices }}</h3>
+            <p>Published Notices</p>
+        </div>
+    </div>
+    
+    <div class="stat-card">
+        <div class="stat-icon warning">✏️</div>
+        <div class="stat-details">
+            <h3>{{ stats.draft_notices }}</h3>
+            <p>Draft Notices</p>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon danger">📦</div>
+        <div class="stat-details">
+            <h3>{{ stats.archived_notices }}</h3>
+            <p>Archived Notices</p>
+        </div>
+    </div>
+    
+    {% if is_super_admin %}
+    <div class="stat-card">
+        <div class="stat-icon info">👥</div>
+        <div class="stat-details">
+            <h3>{{ stats.total_users }}</h3>
+            <p>Active Users</p>
+        </div>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-icon primary">🏢</div>
+        <div class="stat-details">
+            <h3>{{ stats.total_departments }}</h3>
+            <p>Departments</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="stat-card">
+        <div class="stat-icon success">👁️</div>
+        <div class="stat-details">
+            <h3>{{ stats.total_reads }}</h3>
+            <p>Total Acknowledgements</p>
+        </div>
+    </div>
+</div>
+
+<!-- Filter and Search Section -->
+<div class="filter-bar">
+    <form method="GET" action="{{ url_for('admin.dashboard') }}">
+        <div class="filter-grid">
+            <div class="form-group mb-0">
+                <label for="search">Keyword Search</label>
+                <input type="text" id="search" name="search" class="input-control" placeholder="Title or content..." value="{{ search_query }}">
+            </div>
+            
+            <div class="form-group mb-0">
+                <label for="status">Status</label>
+                <select id="status" name="status" class="input-control">
+                    <option value="">All Statuses</option>
+                    <option value="Published" {% if status_filter == 'Published' %}selected{% endif %}>Published</option>
+                    <option value="Draft" {% if status_filter == 'Draft' %}selected{% endif %}>Draft</option>
+                    <option value="Archived" {% if status_filter == 'Archived' %}selected{% endif %}>Archived</option>
+                </select>
+            </div>
+
+            <div class="form-group mb-0">
+                <label for="priority">Priority</label>
+                <select id="priority" name="priority" class="input-control">
+                    <option value="">All Priorities</option>
+                    <option value="High" {% if priority_filter == 'High' %}selected{% endif %}>High</option>
+                    <option value="Medium" {% if priority_filter == 'Medium' %}selected{% endif %}>Medium</option>
+                    <option value="Low" {% if priority_filter == 'Low' %}selected{% endif %}>Low</option>
+                </select>
+            </div>
+
+            <div class="form-group mb-0">
+                <label for="category_id">Category</label>
+                <select id="category_id" name="category_id" class="input-control">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.id }}" {% if category_filter == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group mb-0">
+                <label for="department_id">Target Dept</label>
+                <select id="department_id" name="department_id" class="input-control">
+                    <option value="">All Departments</option>
+                    {% for dept in departments %}
+                        <option value="{{ dept.id }}" {% if department_filter == dept.id %}selected{% endif %}>{{ dept.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">Filter</button>
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-secondary">Reset</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Notice Management Table -->
+<div class="table-responsive-custom mb-4">
+    <table class="table-custom">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Target Dept</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Author</th>
+                <th>Created</th>
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% if notices %}
+                {% for notice in notices %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('notice.detail', notice_id=notice.id) }}" class="text-white text-decoration-none fw-bold">
+                            {{ notice.title }}
+                        </a>
+                        {% if notice.attachments|length > 0 %}
+                            <span class="ms-1" title="{{ notice.attachments|length }} Attachment(s)">📎</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge-category">{{ notice.category.name if notice.category else 'General' }}</span>
+                    </td>
+                    <td>
+                        {% if notice.target_department %}
+                            <span class="badge-department">{{ notice.target_department.code }}</span>
+                        {% else %}
+                            <span class="badge-status badge-status-archived">All Depts</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if notice.priority == 'High' %}
+                            <span class="badge-priority badge-priority-high">🔴 High</span>
+                        {% elif notice.priority == 'Medium' %}
+                            <span class="badge-priority badge-priority-medium">🟡 Medium</span>
+                        {% else %}
+                            <span class="badge-priority badge-priority-low">🟢 Low</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if notice.status == 'Published' %}
+                            <span class="badge-status badge-status-published">Published</span>
+                        {% elif notice.status == 'Draft' %}
+                            <span class="badge-status badge-status-draft">Draft</span>
+                        {% else %}
+                            <span class="badge-status badge-status-archived">Archived</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted">{{ notice.author.username if notice.author else 'Unknown' }}</td>
+                    <td class="text-muted">{{ notice.created_at.strftime('%b %d, %Y') }}</td>
+                    <td class="text-end">
+                        <div class="d-inline-flex gap-1">
+                            <a href="{{ url_for('notice.detail', notice_id=notice.id) }}" class="btn btn-sm btn-secondary" title="View">View</a>
+                            <a href="{{ url_for('notice.edit', notice_id=notice.id) }}" class="btn btn-sm btn-outline-primary" title="Edit">Edit</a>
+                            <form method="POST" action="{{ url_for('notice.toggle_status', notice_id=notice.id) }}" class="d-inline">
+                                {% if notice.status == 'Published' %}
+                                    <button type="submit" class="btn btn-sm btn-warning" title="Unpublish to Draft">Unpublish</button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-sm btn-success" title="Publish Notice">Publish</button>
+                                {% endif %}
+                            </form>
+                            <form method="POST" action="{{ url_for('notice.delete', notice_id=notice.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this notice?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                <tr>
+                    <td colspan="8" class="text-center py-4 text-muted">
+                        No notices matching the current criteria were found.
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination Controls -->
+{% if pagination.pages > 1 %}
+<nav aria-label="Notice pagination" class="d-flex justify-content-center mt-4">
+    <ul class="pagination pagination-sm">
+        {% if pagination.has_prev %}
+            <li class="page-item">
+                <a class="page-link bg-dark text-white border-secondary" href="{{ url_for('admin.dashboard', page=pagination.prev_num, search=search_query, status=status_filter, priority=priority_filter, category_id=category_filter, department_id=department_filter) }}">Previous</a>
+            </li>
+        {% endif %}
+
+        {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+                <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                    <a class="page-link {% if p == pagination.page %}bg-primary text-white{% else %}bg-dark text-white{% endif %} border-secondary" href="{{ url_for('admin.dashboard', page=p, search=search_query, status=status_filter, priority=priority_filter, category_id=category_filter, department_id=department_filter) }}">{{ p }}</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link bg-dark text-muted border-secondary">…</span></li>
+            {% endif %}
+        {% endfor %}
+
+        {% if pagination.has_next %}
+            <li class="page-item">
+                <a class="page-link bg-dark text-white border-secondary" href="{{ url_for('admin.dashboard', page=pagination.next_num, search=search_query, status=status_filter, priority=priority_filter, category_id=category_filter, department_id=department_filter) }}">Next</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/notice_portal.js') }}"></script>
+{% endblock %}
